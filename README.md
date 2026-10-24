@@ -7,6 +7,15 @@ A standalone, procedural **engine sound simulator** with a live engine diagram, 
 
 Tap **TAP TO START ENGINE** (needed for iPhone audio), then drive with **GAS / BRAKE / NITRO**.
 
+
+## Engine Sound Plugin (for Sine Rally and other hosts)
+`js/plugin.js` wraps the sim as an **Engine Sound Plugin, API v1** ([`PLUGIN_API.md`](PLUGIN_API.md)):
+`create(ctx, destination, options) → { update(telemetry, dt), event(name, data), setPreset(id), dispose() }`, with
+11 presets and per-vehicle defaults. This standalone page is itself a plugin host (`js/main.js` owns the AudioContext
+and master gain and calls `plugin.update()` every frame with telemetry from `motor.js`), so the game and this page run
+**the same module**. Sine Rally vendors `js/plugin.js engine-sim.js engine-dsp.js engine-config.js motor.js` via its
+`tools/sync-enginesim.sh`. Importable live: https://leck-games.github.io/sinerally-enginesim/js/plugin.js
+
 ## Controls
 | Action | Touch | Keyboard |
 |---|---|---|

@@ -1,5 +1,14 @@
 # Merge notes: Engine Sim → Sine Rally
 
+## Status (2026-10-24): merged as a plugin
+The game now uses `js/plugin.js` (Engine Sound Plugin API v1, see `PLUGIN_API.md`) through its host
+`js/engine-audio.js`; the files are vendored into the game's `plugins/enginesim/` by `tools/sync-enginesim.sh` there
+(commit recorded in `plugins/enginesim/VERSION`). After changing anything in `js/plugin.js engine-sim.js engine-dsp.js
+engine-config.js motor.js`, push here, then re-run the sync script in the game repo and push it.
+- `EngineSim` got `manageContext` (default true). The plugin sets it false so the sim never suspends the host's context.
+- Plugin rpm mapping: host idle..redline → preset idle..redline (`rpmMode: 'absolute'` disables it; the standalone uses that).
+The notes below describe the older direct-integration approach and are kept for reference.
+
 This project is a standalone repo, so it can be developed without touching the game. When it's time to merge, the
 only files the game needs are:
 

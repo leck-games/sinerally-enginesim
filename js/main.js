@@ -1,5 +1,7 @@
-// main.js — wires EngineSim + EngineViz + ConfigPanel + pedals/keyboard.
+// main.js — standalone demo. It is a *host* for the Engine Sound Plugin API v1 (plugin.js), the same
+// module Sine Rally vendors, plus the tuning UI (ConfigPanel) and the diagram (EngineViz).
 import { EngineSim } from './engine-sim.js';
+import * as enginePlugin from './plugin.js';
 import { preset, PRESET_ORDER } from './engine-config.js';
 import { EngineViz } from './viz.js';
 import { ConfigPanel } from './ui.js';
@@ -49,21 +51,29 @@ window.addEventListener('blur', () => { for (const k in keyHeld) keyHeld[k] = fa
 // ---------------- audio unlock ----------------
 const overlay = document.getElementById('start');
 const status = document.getElementById('status');
-let started = false;
+let started = false, ctx = null, master = null, plugin = null;
+function unlockCtx() { // host-side iOS unlock: must run synchronously inside the gesture
+  if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; try { ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { ctx = new AC(); } }
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { }
+  if (ctx.state !== 'running') { try { ctx.resume(); } catch (e) { } }
+  try { const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); } catch (e) { }
+}
 function ensureAudio() {
-  // must run synchronously inside the gesture for iOS
-  sim.unlock();
+  unlockCtx();
   if (!started) {
     started = true;
-    sim.start().then(() => {
+    master = ctx.createGain(); master.connect(ctx.destination);
+    enginePlugin.create(ctx, master, { engine: sim, rpmMode: 'absolute', forceScriptProcessor: qs.has('sp') }).then((inst) => {
+      plugin = inst;
       overlay.classList.add('gone');
       status.textContent = sim.mode === 'worklet' ? 'AudioWorklet' : 'ScriptProcessor';
     }).catch((err) => { console.error(err); status.textContent = 'Audio error: ' + err.message; started = false; });
   }
 }
+document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend().catch(() => { }); else ctx.resume().catch(() => { }); });
 overlay.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); });
 // any later gesture re-unlocks (iOS may 'interrupt' the context after calls / Siri / backgrounding)
-window.addEventListener('pointerdown', () => { if (sim.ctx && sim.ctx.state !== 'running') sim.unlock(); }, true);
+window.addEventListener('pointerdown', () => { if (ctx && ctx.state !== 'running') unlockCtx(); }, true);
 if (qs.has('autostart')) ensureAudio();
 
 // ---------------- panel toggle ----------------
@@ -75,7 +85,12 @@ document.getElementById('panel-close').addEventListener('click', () => togglePan
 let last = performance.now(), tel = null;
 function frame(t) {
   const dt = Math.min(0.05, Math.max(0, (t - last) / 1000)); last = t;
-  tel = sim.drive(input, dt);
+  tel = sim.motor.step(dt, input);
+  if (plugin) plugin.update({ // API v1 telemetry, built from the demo's own gas/brake/nitro motor model
+    rpm: tel.rpm, idleRpm: sim.config.idleRpm, redlineRpm: sim.config.redline, throttle: tel.throttle, brake: input.brake ? 1 : 0,
+    load: tel.load, nitro: !!tel.nitro, nitroStrength: tel.nitro ? 1 : 0, nitroTank: tel.nitroTank, gear: tel.gear === 'N' ? 0 : tel.gear,
+    shifting: tel.shifting, limiter: tel.limiter, ignition: tel.spark, turbo: tel.boost, speed: tel.speedKmh / 3.6, paused: false
+  }, dt);
   const vis = sim.getVisualState();
   if (!started || sim.mode === 'none') { vis.rpm = tel.rpm; }
   viz.draw(sim.config, vis, tel);
@@ -84,4 +99,4 @@ function frame(t) {
 requestAnimationFrame(frame);
 
 window.engineSim = sim;
-window.__app = { sim, viz, panel, input, get tel() { return tel; } };
+window.__app = { sim, viz, panel, input, get plugin() { return plugin; }, get tel() { return tel; } };

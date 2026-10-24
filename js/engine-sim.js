@@ -30,6 +30,7 @@ export class EngineSim {
     this.visualOffset = 0; // seconds, user tweak for bluetooth etc.
     this.volume = 1; this.listeners = new Set();
     this._starting = null;
+    this.manageContext = opts.manageContext !== false; // false = host owns suspend/resume (plugin mode)
   }
 
   // ---- lifecycle -------------------------------------------------------------------------
@@ -92,10 +93,13 @@ export class EngineSim {
       sp.connect(this.out);
       this.node = sp; this.mode = 'scriptprocessor';
     }
-    document.addEventListener('visibilitychange', () => {
-      if (!this.ctx) return;
-      if (document.hidden) this.ctx.suspend().catch(() => { }); else this.ctx.resume().catch(() => { });
-    });
+    if (this.manageContext && !this._vis) {
+      this._vis = () => {
+        if (!this.ctx) return;
+        if (document.hidden) this.ctx.suspend().catch(() => { }); else this.ctx.resume().catch(() => { });
+      };
+      document.addEventListener('visibilitychange', this._vis);
+    }
     return this;
   }
 
