@@ -3,11 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#f7e6b5">
 <title>Sine Rally · Engine Sim</title>
-<link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="SR EngineSim">
+<meta name="theme-color" content="#38c45a"><meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<style>/* iOS home-screen */canvas{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#allBuilds{display:inline-block;text-decoration:none;font:900 12px "Arial Black",system-ui,sans-serif;color:#111;background:#fff;border:3px solid #111;border-radius:6px;padding:5px 9px;box-shadow:3px 3px 0 #111;-webkit-tap-highlight-color:transparent}</style>
 </head>
 <body>
 <header id="top">
@@ -15,7 +18,6 @@
   <span id="status" class="tag">tap to start</span>
   <button id="cfg-btn" class="btn">⚙ TUNE</button>
 </header>
-
 <main id="stage">
   <canvas id="viz"></canvas>
   <div id="pedals">
@@ -24,12 +26,10 @@
     <button class="pedal gas" data-k="gas"><b>GAS</b><small>W / ↑</small></button>
   </div>
 </main>
-
 <aside id="panel">
-  <div id="panel-head"><h2 class="ink">TUNE THE ENGINE</h2><button id="panel-close" class="btn">✕</button></div>
+  <div id="panel-head"><h2 class="ink">TUNE THE ENGINE</h2><span><a id="allBuilds" href="https://leck-games.github.io/">‹ ALL BUILDS</a> <button id="panel-close" class="btn">✕</button></span></div>
   <div id="panel-body"></div>
 </aside>
-
 <div id="start">
   <div class="card">
     <h2 class="ink">SINE RALLY<br><span>ENGINE SIM</span></h2>
