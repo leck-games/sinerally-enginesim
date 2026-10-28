@@ -69,7 +69,7 @@ export class ConfigPanel {
       if (v === 'custom') patch.cylinders = c.cylinders; // keep current geometry as starting point
       this.apply(patch);
     }));
-    kids.push(this.select('Cylinders', c.cylinders, countsFor(c.layout).map(n => [n, c.layout === 'rotary' ? `${n} rotors` : n]), (v) => this.apply({ cylinders: +v, firingOrder: null, manualFire: false })));
+    kids.push(this.select('Cylinders', c.cylinders, countsFor(c.layout).map(n => [n, c.layout === 'rotary' ? `${n} rotor${n > 1 ? 's' : ''}` : n]), (v) => this.apply({ cylinders: +v, firingOrder: null, manualFire: false })));
     if (c.layout === 'v') kids.push(this.select('Bank angle', c.bankAngle, BANK_ANGLES.map(a => [a, a + '°']), (v) => this.apply({ bankAngle: +v, manualFire: false })));
     const co = crankOptions(c);
     if (co.length > 1) kids.push(this.select('Crank', c.crank, co, (v) => this.apply({ crank: v, firingOrder: null, manualFire: false })));

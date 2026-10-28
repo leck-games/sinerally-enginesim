@@ -56,6 +56,46 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     if (!ok) fail = true;
     console.log(`worklet ${ok ? 'OK ' : 'BAD'} ${k.padEnd(10)} peak=${s.peak} rms=${s.rms} clip=${s.clip} nan=${s.nan}`);
   }
+  // rotary: 1–16 rotors, one firing per rotor per eccentric-shaft rev, phased 360°/n; every layout reaches 16
+  const rot = await p.evaluate(async () => {
+    const C = await import('./js/engine-config.js'), P = await import('./js/plugin.js');
+    const out = { phase: true, counts: {}, sim: null };
+    for (let n = 1; n <= 16; n++) {
+      const c = C.deriveEngine({ layout: 'rotary', cylinders: n });
+      const fires = c.cyl.map(x => x.fire).sort((a, b) => a - b);
+      if (c.cylinders !== n || c.cycle !== 360 || fires.some((f, k) => Math.abs(f - k * 360 / n) > 0.02)) out.phase = false;
+    }
+    for (const [l] of C.LAYOUTS) out.counts[l] = Math.max(...C.countsFor(l));
+    out.schema = typeof P.configSchema.countsFor === 'function' && P.configSchema.maxCylinders;
+    const sim = window.__app.sim; sim.setConfig({ layout: 'rotary', cylinders: 6, firingOrder: null, manualFire: false });
+    if (!sim.motor.neutral) sim.motor.setNeutral(true);
+    sim.update({ rpm: 3000, throttle: 0.3, load: 0.3, spark: 1 });
+    window.__app.panel.render();
+    await new Promise(r => setTimeout(r, 4000)); // let the revs settle at idle
+    const rs = []; for (let i = 0; i < 12; i++) { rs.push(sim.getVisualState().rpm); await new Promise(r => setTimeout(r, 100)); }
+    const vs = sim.getVisualState(), h = vs.history.filter(e => e.kind !== 2 && e.t > vs.now - 1.2 && e.t <= vs.now - 0.2);
+    vs.rpm = rs.reduce((a, b) => a + b, 0) / rs.length;
+    const per = {}; for (const e of h) per[e.cyl] = (per[e.cyl] || 0) + 1;
+    out.sim = { rotors: sim.config.cylinders, rpm: Math.round(vs.rpm), evPerSec: h.length, perRotor: per, cfgFires: sim.config.cyl.map(c => c.fire) };
+    return out;
+  });
+  console.log('rotary:', JSON.stringify(rot));
+  { const exp = rot.sim.rotors * rot.sim.rpm / 60;
+    const ok = rot.phase && rot.schema === 16 && Object.entries(rot.counts).every(([l, m]) => l === 'single' ? m === 1 : m === 16) &&
+      rot.sim.rotors === 6 && Math.abs(rot.sim.evPerSec - exp) / exp < 0.2 && Object.keys(rot.sim.perRotor).length === 6;
+    console.log((ok ? 'OK  ' : 'BAD ') + 'rotary 1–16 rotors phased 360/n; 6-rotor live firing ' + rot.sim.evPerSec + '/s vs expected ' + exp.toFixed(0) + '/s');
+    if (!ok) fail = true; }
+  await p.screenshot({ path: path.join(shots, 'desktop-rotary6.png') });
+  const rot16 = await p.evaluate(async () => {
+    const { EngineSim } = await import('./js/engine-sim.js'); const C = await import('./js/engine-config.js'); const o = {};
+    for (const [l, n] of [['rotary', 6], ['rotary', 16], ['inline', 16], ['v', 16], ['boxer', 16]]) {
+      const c = C.deriveEngine(Object.assign(C.preset('rotary'), { layout: l, cylinders: n, firingOrder: null, manualFire: false, cyl: [] }));
+      const r = await EngineSim.renderOfflineWorklet({ config: c, seconds: 1.2, script: [{ t: 0, rpm: c.idleRpm, throttle: 0.2, load: 0.2 }, { t: 0.4, rpm: c.redline * 0.9, throttle: 1, load: 1 }] });
+      o[l + n] = r.stats;
+    }
+    return o;
+  });
+  for (const [k, s] of Object.entries(rot16)) { const ok = s.nan === 0 && s.clip < 50 && s.rms > 0.02; if (!ok) fail = true; console.log(`worklet ${ok ? 'OK ' : 'BAD'} ${k.padEnd(10)} peak=${s.peak} rms=${s.rms} clip=${s.clip} nan=${s.nan}`); }
   // script processor fallback
   const sp = await open({ width: 900, height: 700 }, base + '?autostart=1&sp=1&preset=inline4');
   await sleep(1500);

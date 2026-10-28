@@ -36,6 +36,9 @@ export default {                       // (named exports with the same names als
       event(name, data) { },           // optional
       setPreset(id) { },               // optional: live preset switch (otherwise the host re-creates the plugin)
       get preset() { return 'v8'; },   // optional: current preset id (menu highlight)
+      setConfig(patch, opts) { },      // optional: live engine-config edit (enables the in-game sound EDITOR, §1a)
+      getConfig() { return {}; },      // optional: current config, JSON-safe copy (required together with setConfig)
+      getVisualState() { },            // optional: firing-lights state for the editor
       dispose() { },                   // optional but strongly recommended
     };
   }
@@ -44,6 +47,25 @@ export default {                       // (named exports with the same names als
 Preset choice when the plugin is created or the vehicle changes: the user's saved choice for this plugin + vehicle →
 the vehicle's own default sound preset id (`vehiclePreset`, if your `presets` contain it) → your `vehiclePresets[vehicle]`
 → `defaultPreset` → the first preset.
+
+## 1a. Optional: live config editing (`setConfig` / `getConfig`)
+Additive to API v1 (`apiVersion` stays 1). If the instance has **both** `setConfig` and `getConfig`, the game shows
+☰ → ENGINE SOUND → **EDIT**; otherwise the editor is hidden.
+- `getConfig()` → a JSON-safe object (copy). The host saves it per vehicle (`localStorage` `sinerally_sndcfg1`), in
+  named slots, and as exported JSON, and later hands it back with `setConfig(saved, { replace: true })`.
+- `setConfig(patch, { replace })` → merge `patch` into the current config (or replace it), apply it live (no audible
+  restart if you can help it) and return the new derived config. Must tolerate partial/unknown fields. Called at most
+  ~20×/s while a slider is dragged.
+- `getVisualState()` (optional) → `{ now, crank, cycle, rpm, lastFire: number[], lastKind: number[] }` (times in
+  `ctx` seconds as heard; `lastKind` 1 = misfire); drives the editor's firing-lights strip. Called once per frame only
+  while the editor is open.
+- Module export `configSchema` (optional) describes the fields so the host can build controls: `{ maxCylinders, layouts,
+  shapes, bankAngles, limiters, induction: [[value,label],…], countsFor(layout), crankOptions(cfg),
+  defaultFiringOrder(cfg), parseFiringOrder(str, n), firingIntervals(cfg), cycleOf(cfg) }`. The game's editor speaks
+  the Engine Sim schema (`layout`, `cylinders`, `bankAngle`, `crank`, `stroke`, `firingOrder`, `cyl[]` {vol, tone,
+  shape, runner, misfire, rough, fire}, `exhaust`, `exhaustVol`, `mufflerTone`, `crossover`, `runnerReso`, `intakeVol`,
+  `mechVol`, `induction`, `inductionVol`, `pops`, `limiter`, `idleRpm`, `redline`, `displacement`, `master`); a
+  plugin without `configSchema` gets a generic JSON editor (export/import only).
 
 ## 2. Telemetry (`update(t, dt)`)
 `t` is **one object reused every frame** (mutated in place) – read it, don't keep a reference or store it.

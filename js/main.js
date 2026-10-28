@@ -53,8 +53,8 @@ const overlay = document.getElementById('start');
 const status = document.getElementById('status');
 let started = false, ctx = null, master = null, plugin = null;
 function unlockCtx() { // host-side iOS unlock: must run synchronously inside the gesture
+  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { } // iOS 16.4+: play with the silent switch on
   if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; try { ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { ctx = new AC(); } }
-  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { }
   if (ctx.state !== 'running') { try { ctx.resume(); } catch (e) { } }
   try { const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); } catch (e) { }
 }

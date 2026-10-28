@@ -35,7 +35,7 @@ URL options: `?preset=flatV8` (any preset key), `?autostart=1` (desktop/testing)
 - Also: block thump, intake roar, valvetrain ticks, turbo whine + blow-off valve, supercharger whine, nitro hiss + whoosh with harder combustion, afterfire pops on lift-off, and limiter pops.
 - Unequal firing (cross-plane V8 burble, V-twin potato, odd-fire V10, boxer rumble) comes straight out of the crank geometry. It is not faked.
 
-**Engine layouts:** inline 2–6, V2/V6/V8/V10/V12 (bank angle 15–180°, cross- or flat-plane V8, common-pin odd-fire or split-pin even-fire), boxer 2/4/6, single, rotary (2/3 rotors), **Custom** (1–16 cylinders, each with its own tilt and crank position).
+**Engine layouts (every layout up to 16 cylinders/rotors):** inline 2–16, V2–V16 (even counts) (bank angle 15–180°, cross- or flat-plane V8, common-pin odd-fire or split-pin even-fire), boxer 2–16 (even), single, rotary 1–16 rotors (each rotor fires once per eccentric-shaft revolution, rotors phased 360°/n), **Custom** (1–16 cylinders, each with its own tilt and crank position).
 Firing orders can be edited, and each layout has a default (I4 1-3-4-2, cross V8 1-8-4-3-6-5-7-2, I6 1-5-3-6-2-4, …). Fire angles are worked out from layout + crank + order. You can also drag any single cylinder's fire angle by hand. 2-stroke/4-stroke toggle.
 
 **Visualization:** an isometric engine with moving pistons/rotors, a light on each cylinder that flashes **exactly when that cylinder is heard firing** (offset by the audio output latency), a combustion flash in the chamber, a firing timeline over 2 cycles, a crank-angle dial with every cylinder's fire angle marked, a tachometer with redline and shift lights, gear, km/h, a nitro tank, and LIMITER / NITRO / SHIFT badges. Misfires show red; nitro tints the flashes cyan.
@@ -79,8 +79,13 @@ python3 -m http.server 18923 & node tools/test-browser.cjs http://127.0.0.1:1892
 ```
 
 ## Known limitations
-- **iOS:** audio only starts after a tap. On iOS 17+ `navigator.audioSession.type = 'playback'` makes it play with the ring/silent switch on; older iOS stays muted while the switch is on. When the tab is backgrounded or a call interrupts, the context is suspended; the next tap resumes it.
+- **iOS:** audio only starts after a tap. Inside the unlocking tap, `navigator.audioSession.type = 'playback'` is set (iOS 16.4+), so it plays with the Ring/Silent switch on; older iOS stays muted while the switch is on. When the tab is backgrounded or a call interrupts, the context is suspended; the next tap resumes it.
 - Light sync uses `getOutputTimestamp()` / `outputLatency`. Safari reports these less accurately, and Bluetooth adds 100–250 ms that the browser often doesn't report. Use *Tune → Exhaust & Sound → Light sync offset* to correct it.
 - At high rpm on 8–16 cylinders, the screen refreshes only 60 (or 120) times a second while the engine fires hundreds of times a second. So each light shows a short decaying glow rather than a single crisp frame per firing, and the timeline strip shows every event.
 - This is a stylised physical model, not a CFD exhaust simulation. Changing config while a pulse is playing can click once.
 - 16 cylinders at 48 kHz uses roughly 2–4% of one core on desktop. On an older iPhone, keep the cylinder count sensible if other audio is running.
+
+## Plugin config API (v1.1, additive)
+The plugin instance also has optional `setConfig(patch, {replace})`, `getConfig()` and `getVisualState()`, and the module
+exports `configSchema` (layouts, counts, crank options, firing-order helpers). Sine Rally uses them for its in-game
+sound editor (☰ → ENGINE SOUND → EDIT). See PLUGIN_API.md §1a.
